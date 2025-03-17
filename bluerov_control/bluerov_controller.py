@@ -1,10 +1,12 @@
 import numpy as np
 import math
 
+import rclpy
 from rclpy.node import Node
 from rcl_interfaces.msg import ParameterDescriptor
 from rcl_interfaces.msg import SetParametersResult
-
+from nav_msgs.msg import Odometry
+from geometry_msgs.msg import Pose
 
 from bluerov_control.PIDController import PIDController
 
@@ -13,6 +15,47 @@ class BlueROVController(Node):
         super().__init__('bluerov_controller')
 
         self.get_logger().debug("calculating pid")
+
+        self.ns = self.get_namespace()
+        self.get_logger().info(">>>>>>>>>>> namespace =" + self.ns)
+
+        # create publishers
+
+        # create subscribers
+        # subscribe to filtered states and trajectory
+        self.odom_sub = self.create_subscription(Odometry, 'odom_topic_name', self.odom_callback, 10)
+        self.cmd_pose_sub = self.create_subscription(Pose, 'cmd_pose_topic_name', self.pose_callback, 10)
+        
+        # timer variables
+        control_rate = 20
+        self.control_period = 1.0 / control_rate
+        self.control_timer = self.create_timer(self.control_period, self.control_callback)
+
+        ################## CONTROL ##################
+        self.cmd_pose = Pose()
+        self.odom = Odometry()
+
+        # control switch
+
+        # bouyancy compensation
+
+        # PID initialization for depth and yaw
+        self.pid_depth = PIDController(type='linear')
+        self.pid_yaw = PIDController(type='angular')
+
+        self.config = {}
+        self._declare_and_fill_map('k_p_depth', 4.0, "K P of depth", self.config)
+        self._declare_and_fill_map('k_i_depth', 0.5, "K I of depth", self.config)
+        self._declare_and_fill_map('k_d_depth', 0.0, "K D of depth", self.config)
+
+        self._declare_and_fill_map('k_p_yaw', 0.5, "K P of yaw", self.config)
+        self._declare_and_fill_map('k_i_yaw', 0.0, "K I of yaw", self.config)
+        self._declare_and_fill_map('k_d_yaw', 0.5, "K D of yaw", self.config)
+
+        self.add_on_set_parameters_callback(self.callback_params)
+        
+        # set up service
+
 
     def control_switch_callback(self, msg):
         """
@@ -152,5 +195,14 @@ class BlueROVController(Node):
 
         return j, r_zyx, t_zyx
     
+def main(args=None):
+    rclpy.init(args=args)
+    node = BlueROVController()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
 
+
+if __name__ == "__main__":
+    main()
 
