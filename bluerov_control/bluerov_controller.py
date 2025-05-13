@@ -131,12 +131,18 @@ class BlueROVController(Node):
         Depth control using PI controller
         """
         err, int_err, diff_err = self.pid_depth.calculate_pid(self.target_depth, self.current_depth, current_time)
+        control = self.pid_depth.calculate_pid(err, int_err, diff_err)
+        self.get_logger().info(f"Depth Control: {control}")
+        return control
 
     def yaw_control(self):
         """
         Yaw control using PID controller
         """
-        pass
+        err, int_err, diff_err = self.pid_yaw.calculate_pid(self.target_yaw, self.current_yaw)
+        control = self.pid_yaw.calculate_pid(err, int_err, diff_err)
+        self.get_logger().info(f"Yaw Control: {control}")
+        return control
     
     def update_control_param(self):
         """
